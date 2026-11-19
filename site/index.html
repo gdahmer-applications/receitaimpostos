@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Consulta Fiscal | CNPJ e créditos</title>
+  <meta name="description" content="Consulta cadastral de CNPJs e classificação tributária de CT-e.">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="./" aria-label="Consulta Fiscal, início"><span class="brand-mark">F</span><span>Consulta <strong>Fiscal</strong></span></a>
+      <span class="top-note">MADESA <span aria-hidden="true">/</span> FRETES</span>
+    </div>
+  </header>
+  <main class="container">
+    <section class="hero">
+      <div><div class="eyebrow"><span class="dot"></span> FERRAMENTA DE CONSULTA</div>
+      <h1>Informações para<br><span>uma análise mais clara.</span></h1>
+      <p>Consulte empresas e confira indicadores da classificação tributária do CT-e em um só lugar.</p></div>
+      <div class="hero-icon" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><rect x="17" y="12" width="51" height="66" rx="8" fill="#e8efff"/><path d="M29 29h26M29 39h21M29 49h18M29 59h14" stroke="#4972db" stroke-width="4" stroke-linecap="round"/><circle cx="66" cy="64" r="18" fill="#173a83"/><path d="m79 77 9 9" stroke="#173a83" stroke-width="6" stroke-linecap="round"/><path d="m59 64 5 5 9-10" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </section>
+
+    <section class="layout" aria-label="Consulta cadastral">
+      <div class="card query-card">
+        <div class="section-head"><div class="section-icon">01</div><div><h2>Consultar empresas</h2><p>Informe os CNPJs que deseja verificar.</p></div></div>
+        <form id="cnpj-form">
+          <label for="cnpjs">CNPJs <span class="required">*</span></label>
+          <textarea id="cnpjs" rows="5" placeholder="00.000.000/0001-00&#10;00.000.000/0001-00" spellcheck="false" required></textarea>
+          <div class="helper">Um CNPJ por linha ou separado por vírgula. Até 50 por consulta.</div>
+          <div class="actions"><button class="primary" id="consultar" type="submit"><span>Consultar empresas</span><span aria-hidden="true">→</span></button><button class="secondary" id="limpar" type="button">Limpar</button></div>
+        </form>
+        <div class="privacy"><span class="privacy-icon">i</span><p>Os CNPJs são enviados à <strong>BrasilAPI / Minha Receita</strong>, serviço de terceiros que consulta dados públicos. A página não grava a lista no GitHub.</p></div>
+      </div>
+      <aside class="card insight-card">
+        <div class="aside-top"><span class="small-tag">COMO FUNCIONA</span><span class="aside-symbol">↗</span></div>
+        <h2>O cadastro é o<br>primeiro passo.</h2>
+        <p>A consulta mostra dados da empresa. O crédito depende da operação, do CT-e e da apuração fiscal.</p>
+        <ul><li><span>01</span><div><strong>Cadastro da empresa</strong><small>Situação, localização e Simples</small></div></li><li><span>02</span><div><strong>Dados disponíveis</strong><small>Histórico tributário com o ano</small></div></li><li><span>03</span><div><strong>Classificação do CT-e</strong><small>Indicadores de CBS e IBS</small></div></li></ul>
+      </aside>
+    </section>
+
+    <section id="results" class="results-section" aria-live="polite">
+      <div class="results-heading"><div><div class="eyebrow muted">RESULTADOS</div><h2>Empresas consultadas</h2></div><span id="count" class="count">Nenhuma consulta</span></div>
+      <div class="card empty" id="empty"><span class="empty-icon">⌕</span><strong>Suas consultas aparecerão aqui</strong><p>Informe os CNPJs acima para começar.</p></div>
+      <div class="card table-wrap" id="table-wrap" hidden><table><thead><tr><th>EMPRESA / CNPJ</th><th>LOCALIDADE</th><th>SITUAÇÃO</th><th>SIMPLES NACIONAL</th><th>HISTÓRICO IRPJ</th></tr></thead><tbody id="company-rows"></tbody></table></div>
+      <p class="results-note" id="results-note" hidden>O histórico de IRPJ pode ser de anos anteriores. A consulta de Simples representa o dado cadastral informado pelo provedor; confirme o regime aplicável à data da operação.</p>
+    </section>
+
+    <section class="card classification" aria-labelledby="class-title">
+      <div class="class-copy"><div class="eyebrow muted">RECEITA FEDERAL · CBS E IBS</div><h2 id="class-title">Classificação do CT-e</h2><p>Se você tiver o código <strong>cClassTrib</strong> do documento, consulte os indicadores publicados pela Receita.</p></div>
+      <form id="class-form" class="class-form"><div><label for="class-code">Código cClassTrib</label><input id="class-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="Ex.: 000001" required></div><div><label for="class-year">Data de referência</label><select id="class-year"><option value="2027">01/01/2027</option><option value="2028">01/01/2028</option></select></div><button class="outline" type="submit">Consultar código <span aria-hidden="true">→</span></button></form>
+      <div id="class-result" class="class-result" aria-live="polite" hidden></div>
+      <p class="classification-note">O código é informado pelo usuário; ele não é determinado automaticamente pelo CNPJ. Os indicadores não confirmam o crédito disponível. A base é uma fotografia da versão indicada.</p>
+    </section>
+
+    <footer><span>Consulta Fiscal <span class="footer-sep">·</span> Apoio à análise de fretes</span><a href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular" target="_blank" rel="noopener noreferrer">Fonte: Receita Federal ↗</a></footer>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+name: Publicar consulta fiscal
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: receitaimpostos-pages
+  cancel-in-progress: false
+
+jobs:
+  preparar:
+    name: Testar e preparar dados oficiais
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Baixar consulta fiscal
+        uses: actions/checkout@v4
+        with:
+          path: consulta
+      - name: Baixar calculadora oficial - regime regular
+        uses: actions/checkout@v4
+        with:
+          repository: ReceitaFederal/calculadora-rtc-regime-regular
+          ref: 150cccbe414d4a5edea703e4f7a424af5aa222c7
+          path: upstream/regular
+      - name: Baixar calculadora oficial - Simples Nacional
+        uses: actions/checkout@v4
+        with:
+          repository: ReceitaFederal/calculadora-rtc-simples-nacional
+          ref: c5b0f01c8351c3f0d0795cc617b29d233e9f98df
+          path: upstream/simples
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Testar consulta
+        working-directory: consulta
+        run: npm test
+      - name: Copiar os fontes oficiais para o repositório
+        working-directory: consulta
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p receita/calculadora-rtc-regime-regular receita/calculadora-rtc-simples-nacional
+          rsync -a --delete --exclude=.git/ --exclude=.github/ "$GITHUB_WORKSPACE/upstream/regular/" receita/calculadora-rtc-regime-regular/
+          rsync -a --delete --exclude=.git/ --exclude=.github/ "$GITHUB_WORKSPACE/upstream/simples/" receita/calculadora-rtc-simples-nacional/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add receita
+          if git diff --cached --quiet; then
+            echo 'Fontes oficiais já estão atualizados.'
+          else
+            git commit -m 'Adicionar código oficial das calculadoras da Receita'
+            git push origin HEAD:main
+          fi
+      - name: Gerar base de classificações da Receita
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/upstream/regular"
+          mkdir -p calculadora/db
+          ./mvnw flyway:migrate -Dflyway.configFiles=./flyway/flyway-pro.conf --batch-mode --errors
+          ./mvnw package -Dmaven.test.skip=true --batch-mode --errors
+          java -Dspring.profiles.active=offline -jar target/api-regime-geral.jar > "$RUNNER_TEMP/calculadora.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          python "$GITHUB_WORKSPACE/consulta/tools/exportar_dados.py" || { tail -n 80 "$RUNNER_TEMP/calculadora.log"; exit 1; }
+      - name: Guardar cópia da página
+        uses: actions/upload-artifact@v4
+        with:
+          name: consulta-fiscal
+          path: consulta/site
+          retention-days: 7
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Guardar página para publicação
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: consulta/site
+  publicar:
+    name: Publicar página
+    needs: preparar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
