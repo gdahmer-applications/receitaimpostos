@@ -1,0 +1,104 @@
+application:
+  db:
+    filename: calculadora-pro.db
+
+spring:
+  application:
+    name: api-simples-nacional
+  config:
+    activate:
+      on-profile: testes
+  datasource:
+    url: jdbc:sqlite:file:./calculadora/db/${application.db.filename}?mode=ro&date_class=TEXT&date_string_format=yyyy-MM-dd
+    username: sa
+    password:
+    driverClassName: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    defer-datasource-initialization: true
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        "[format_sql]": false
+  sql:
+    init:
+      mode: embedded
+  task:
+    execution:
+      pool:
+        max-size: 16
+        queue-capacity: 100
+        keep-alive: "10s"
+  devtools:
+    add-properties: false
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ssXXX       # Formato de data/hora padrão (ISO 8601 com offset)
+    serialization:
+      write-dates-as-timestamps: false          # Escrever datas como strings ao invés de timestamps
+    deserialization:
+      adjust-dates-to-context-time-zone: false  # Ajustar datas para o timezone configurado
+      fail-on-unknown-properties: false         # Falhar se propriedade desconhecida for encontrada
+    property-naming-strategy: LOWER_CAMEL_CASE  # Estratégia de nomenclatura de propriedades
+    default-property-inclusion: NON_NULL
+  http:
+    codecs:
+      max-in-memory-size: 500KB
+
+logging:
+  level:
+    root: INFO
+    br:
+      gov:
+        serpro:
+          rtc: INFO
+
+server:
+  # Porta 0 = aleatória: os testes usam MockMvc (não abrem porta), mas se algum teste
+  # futuro subir servidor real, nunca disputa porta com os backends locais (8080/3000).
+  port: 0
+  servlet:
+    context-path: /api
+  tomcat:
+    use-relative-redirects: true
+    threads:
+      max: 250
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 1024
+
+springdoc:
+  version: '@springdoc.version@'
+  api-docs:
+    path: /api-docs
+    version: openapi-3-1
+  swagger-ui:
+    layout: BaseLayout
+    display-request-duration: true
+    groups-order: DESC
+    operationsSorter: method
+    disable-swagger-default-url: true
+    use-root-path: true
+  show-actuator: false
+  cache:
+    disabled: true
+
+cache:
+  specs:
+    - name: VersaoBaseDadosService.getUltimaVersao
+      expireAfterAccess: "P30D"
+      initialCapacity: 1
+      maximumSize: 1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+      base-path: "/"
+      path-mapping:
+        prometheus: "metrics"
+
+versao:
+  ambiente: testes

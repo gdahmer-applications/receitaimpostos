@@ -1,0 +1,133 @@
+# Perfil "offline": execução local via run-offline.sh — portas 3000 (HTTP) e 9102 (métricas).
+# ATENÇÃO: este arquivo é cópia do application.yml (que atende o perfil "online" na nuvem);
+# replicar aqui qualquer mudança feita lá (e vice-versa).
+# Nota: arquivos específicos de perfil não podem conter a chave spring.profiles.active.
+info:
+  app:
+    version: '@project.version@'
+
+application:
+  db:
+    filename: calculadora-pro.db
+    download:
+      url: ${DB_DOWNLOAD_URL:}
+
+spring:
+  application:
+    name: api-simples-nacional
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:sqlite:file:./calculadora/db/${application.db.filename}?mode=ro&date_class=TEXT&date_string_format=yyyy-MM-dd
+    username: sa
+    password:
+    driverClassName: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    defer-datasource-initialization: true
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        "[format_sql]": false
+  sql:
+    init:
+      mode: embedded
+  task:
+    execution:
+      pool:
+        max-size: 16
+        queue-capacity: 100
+        keep-alive: "10s"
+  devtools:
+    add-properties: false
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ssXXX       # Formato de data/hora padrão (ISO 8601 com offset)
+    serialization:
+      write-dates-as-timestamps: false          # Escrever datas como strings ao invés de timestamps
+    deserialization:
+      adjust-dates-to-context-time-zone: false  # Ajustar datas para o timezone configurado
+      fail-on-unknown-properties: false         # Falhar se propriedade desconhecida for encontrada
+    property-naming-strategy: LOWER_CAMEL_CASE  # Estratégia de nomenclatura de propriedades
+    default-property-inclusion: NON_NULL
+  http:
+    codecs:
+      max-in-memory-size: 500KB
+
+logging:
+  level:
+    root: INFO
+    br:
+      gov:
+        serpro:
+          rtc: INFO
+
+server:
+  port: 8082
+  servlet:
+    context-path: /api
+  tomcat:
+    use-relative-redirects: true
+    threads:
+      max: 250
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 1024
+
+springdoc:
+  version: '@springdoc.version@'
+  api-docs:
+    path: /api-docs
+    version: openapi-3-1
+  swagger-ui:
+    layout: BaseLayout
+    display-request-duration: true
+    groups-order: DESC
+    operationsSorter: method
+    disable-swagger-default-url: true
+    use-root-path: true
+    supported-submit-methods: ["get", "post"]
+  show-actuator: false
+  cache:
+    disabled: true
+
+app:
+  cors:
+    # Origem do front Angular em dev local. Externalizado: sobrescrever via
+    # APP_CORS_ALLOWED_ORIGINS (lista separada por vírgula) se necessário.
+    # NUNCA usar "*".
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:}
+    allowed-methods: GET, POST, OPTIONS
+    allowed-headers: Content-Type, Authorization
+    allow-credentials: false
+    max-age: "3600s"
+
+cache:
+  specs:
+    - name: VersaoBaseDadosService.getUltimaVersao
+      expireAfterAccess: "P30D"
+      initialCapacity: 1
+      maximumSize: 1
+
+management:
+  server:
+    port: 9103
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+      base-path: "/"
+      path-mapping:
+        prometheus: "metrics"
+
+versao:
+  # URL do endpoint /versao da instalação online usada pelo comparador de versões (modo offline).
+  # Sobrescrever por variável de ambiente para apontar para outra nuvem/URL.
+  url: ${VERSAO_URL:https://piloto-cbs.tributos.gov.br/servico/calculadora-consumo/api/calculadora/dados-abertos/versao}
+  # Identificação do ambiente exposta no campo "ambiente" do endpoint /versao.
+  ambiente: ${VERSAO_AMBIENTE:offline}
+  connect-timeout: 5s
+  read-timeout: 10s
