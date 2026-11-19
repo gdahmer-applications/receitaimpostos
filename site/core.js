@@ -153,8 +153,10 @@ export function addCteEvidence(record, doc) {
   if (!record.role) record.role = 'carrier';
   const ufs = distinct(record.documents.map(item => item.startUf).filter(uf => UFS.includes(uf)));
   const cities = distinct(record.documents.map(item => item.startCity));
-  if (record.originSource !== 'manual') { record.originUf = ufs.length === 1 ? ufs[0] : ''; record.originSource = 'cte'; }
-  if (record.citySource !== 'manual') { record.originCity = ufs.length === 1 && cities.length === 1 ? cities[0] : ''; record.citySource = 'cte'; }
+  const allUfsKnown = record.documents.every(item => UFS.includes(item.startUf));
+  const allCitiesKnown = record.documents.every(item => Boolean(String(item.startCity || '').trim()));
+  if (record.originSource !== 'manual') { record.originUf = allUfsKnown && ufs.length === 1 ? ufs[0] : ''; record.originSource = 'cte'; }
+  if (record.citySource !== 'manual') { record.originCity = allUfsKnown && allCitiesKnown && ufs.length === 1 && cities.length === 1 ? cities[0] : ''; record.citySource = 'cte'; }
   const codes = distinct(record.documents.map(item => item.cClassTrib).filter(code => /^\d{6}$/.test(code)));
   if (record.classSource !== 'manual') { record.cClassTrib = codes.length === 1 ? codes[0] : ''; record.classSource = 'cte'; }
   return true;

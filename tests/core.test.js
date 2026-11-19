@@ -117,4 +117,7 @@ test('origem por CT-e é sugerida, conflitos preservam a escolha manual e duplic
   addCteEvidence(draft,{...doc,id:'terceiro',startUf:'BA',startCity:'Salvador'});
   assert.equal(draft.originUf,'BA');
   assert.throws(()=>addCteEvidence(draft,{...doc,id:'outro',cnpj:'19131243000197'}),/outro CNPJ/);
+  const missing=registrationDraft({cnpj:'12ABC34501DE35'});
+  addCteEvidence(missing,doc); addCteEvidence(missing,{...doc,id:'quarto',startUf:'',startCity:''});
+  assert.equal(missing.originUf,''); assert.equal(missing.originCity,'');
 });

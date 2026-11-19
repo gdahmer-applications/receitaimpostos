@@ -1,4 +1,4 @@
-import { MAX_CNPJS, parseCnpjs, formatCnpj, queryCompany, classificationView, UFS, REGIMES, PRICE_MODES, ICMS_MODES, registrationDraft, registrationIssues, registrationCsv, parseCteText, addCteEvidence } from './core.js?v=4';
+import { MAX_CNPJS, parseCnpjs, formatCnpj, queryCompany, classificationView, UFS, REGIMES, PRICE_MODES, ICMS_MODES, registrationDraft, registrationIssues, registrationCsv, parseCteText, addCteEvidence } from './core.js?v=5';
 
 const $ = id => document.getElementById(id);
 const element = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
