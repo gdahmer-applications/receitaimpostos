@@ -89,6 +89,76 @@ export function classificationView(payload, code) {
   };
 }
 
+export const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+export const REGIMES = {
+  pending: 'Pendente', real: 'Lucro Real · regular', presumido: 'Lucro Presumido · regular',
+  simples_regular: 'Simples · IBS/CBS regular', simples_das: 'Simples · IBS/CBS no DAS',
+};
+export const PRICE_MODES = { pending: 'Pendente', included: 'Impostos incluídos', base: 'Antes dos impostos' };
+export const ICMS_MODES = { pending: 'Pendente', standard: 'ICMS destacado · regra geral' };
+
+export function registrationDraft(company) {
+  return {
+    company, role: '', name: '', regime: 'pending', originUf: '', originCity: '',
+    priceMode: 'pending', icmsMode: 'pending', cbsDas: '', ibsDas: '', cClassTrib: '', note: '',
+  };
+}
+
+function validPercent(value) {
+  const text = String(value ?? '').trim();
+  if (!/^\d+(?:[.,]\d+)?$/.test(text)) return false;
+  const n = Number(text.replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 && n < 100;
+}
+
+export function registrationIssues(record) {
+  const issues = [];
+  if (!['carrier', 'madesa'].includes(record.role)) return ['Identificar a empresa'];
+  if (record.role === 'madesa') return [];
+  if (!String(record.name || '').trim()) issues.push('Nome no FreteLAB');
+  if (!Object.hasOwn(REGIMES, record.regime) || record.regime === 'pending') issues.push('Tipo fiscal');
+  if (!UFS.includes(record.originUf)) issues.push('UF de início');
+  if (!['included', 'base'].includes(record.priceMode)) issues.push('Tratamento do frete');
+  if (record.icmsMode !== 'standard') issues.push('Tratamento do ICMS');
+  if (record.regime === 'simples_das') {
+    if (!validPercent(record.cbsDas)) issues.push('CBS no DAS');
+    if (!validPercent(record.ibsDas)) issues.push('IBS no DAS');
+    if (record.priceMode === 'base') issues.push('Simples no DAS requer frete com impostos incluídos');
+  }
+  if (record.cClassTrib && !/^\d{6}$/.test(record.cClassTrib)) issues.push('cClassTrib deve ter 6 dígitos');
+  return issues;
+}
+
+function csvCell(value) {
+  let text = String(value ?? '').replace(/[\r\n]+/g, ' ');
+  if (/^\s*[=+@\-]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+export function registrationCsv(records, year) {
+  const headers = ['Ano do cadastro','Papel','Nome no FreteLAB','Razão social','CNPJ','Município cadastral','UF cadastral',
+    'Situação cadastral','Simples informado','Histórico IRPJ','Fonte cadastro','Tipo fiscal confirmado','UF início transporte',
+    'Município início transporte','Tratamento do frete','Tratamento do ICMS','CBS no DAS (%)','IBS no DAS (%)',
+    'cClassTrib - referência','Observações','Pendências','Padrão Madesa ICMS v1.3.38','Padrão Madesa CBS v1.3.38',
+    'Padrão Madesa IBS v1.3.38','CBS padrão do ano (%)','Status CBS do ano','IBS UF padrão do ano (%)','IBS município padrão do ano (%)'];
+  const annual = String(year) === '2027' ? ['11,2','Provisória','0,05','0,05'] : ['','Pendente','0,05','0,05'];
+  const rows = records.map(record => {
+    const c = record.company;
+    const isCarrier = record.role === 'carrier';
+    const pending = registrationIssues(record);
+    const history = c.history ? `${c.history.description} (${c.history.year})` : 'Não informado';
+    return [year, record.role === 'carrier' ? 'Transportadora' : record.role === 'madesa' ? 'Madesa' : 'Pendente',
+      isCarrier ? record.name : '', c.name, formatCnpj(c.cnpj), c.city, c.uf, c.status, c.simples, history, c.source || 'Indisponível',
+      isCarrier ? (REGIMES[record.regime] || 'Pendente') : '', isCarrier ? record.originUf : '', isCarrier ? record.originCity : '',
+      isCarrier ? (PRICE_MODES[record.priceMode] || 'Pendente') : '', isCarrier ? (ICMS_MODES[record.icmsMode] || 'Pendente') : '',
+      isCarrier && record.regime === 'simples_das' ? record.cbsDas : '', isCarrier && record.regime === 'simples_das' ? record.ibsDas : '',
+      isCarrier ? record.cClassTrib : '', record.note,
+      record.role === 'madesa' ? 'Conferir regras gerais da Madesa no FreteLAB' : pending.length ? pending.join(' | ') : 'Nenhuma pendência dos campos básicos',
+      'Elegível 100% por premissa','Pendente','Pendente',...annual];
+  });
+  return '\uFEFF' + [headers, ...rows].map(row => row.map(csvCell).join(';')).join('\r\n') + '\r\n';
+}
+
 export async function queryCompany(cnpj, fetcher = fetch) {
   if (!validCnpj(cnpj)) throw new Error('CNPJ inválido. Confira os dígitos.');
   const sources = [

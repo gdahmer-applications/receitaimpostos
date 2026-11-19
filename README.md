@@ -12,6 +12,12 @@ Cole até 50 CNPJs, separados por linha, vírgula ou ponto e vírgula. A consult
 
 A página apresenta situação cadastral, localidade, opção pelo Simples quando informada e o último ano de histórico de IRPJ disponível. Essas informações podem estar desatualizadas: histórico de lucro real/presumido não confirma o regime atual ou futuro e a opção cadastral pelo Simples não informa, por si só, a opção por IBS/CBS dentro ou fora do DAS.
 
+## Preparação para o FreteLAB v1.3.38
+
+Depois de consultar, identifique cada empresa como **transportadora** ou **Madesa**. Para transportadoras, preencha o nome já existente no FreteLAB, tipo fiscal, UF de início da operação, município quando necessário, tratamento do frete e tratamento do ICMS. Se o Simples recolher IBS/CBS no DAS, informe também os percentuais pertinentes. O histórico cadastral não é aplicado automaticamente como regime confirmado e a UF de endereço não é usada automaticamente como origem do transporte.
+
+As premissas gerais da Madesa e as alíquotas padrão por ano são apresentadas como referências da versão 1.3.38, não como leitura das configurações atuais do banco de dados. O CSV baixado é uma conferência editável, com pendências, e **não é um arquivo de importação automática**. CNPJ e cClassTrib também são dados de referência e não são gravados no cadastro fiscal dessa versão. As anotações da tela são mantidas apenas enquanto a página estiver aberta.
+
 ## Consulta da classificação do CT-e
 
 Informe o código `cClassTrib` do documento e a data de referência disponível. A página apresenta os indicadores da Receita para crédito do adquirente de IBS/CBS e o vínculo com CT-e registrado na base; não identifica a classificação pelo CNPJ e não confirma automaticamente o crédito. As tabelas representam uma fotografia com data e versão fixas, devendo ser atualizadas e revisadas conforme a Receita publique mudanças.

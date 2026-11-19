@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validCnpj, normalizeCnpj, parseCnpjs, simpleLabel, latestTaxHistory, normalizeCompany, classificationView, queryCompany } from '../site/core.js';
+import { validCnpj, normalizeCnpj, parseCnpjs, simpleLabel, latestTaxHistory, normalizeCompany, classificationView, queryCompany, registrationDraft, registrationIssues, registrationCsv } from '../site/core.js';
 
 test('valida CNPJs numérico e alfanumérico da Receita', () => {
   assert.equal(validCnpj('19.131.243/0001-97'), true);
@@ -47,4 +47,36 @@ test('consulta pública só usa dados da empresa solicitada e trata erro', async
   assert.equal(attempts,2); assert.equal(fallback.source,'BrasilAPI');
   await assert.rejects(queryCompany('19131243000197',async()=>({ok:false,status:429})),/indisponíveis/);
   await assert.rejects(queryCompany('19131243000198',fetcher),/inválido/);
+});
+
+test('CNPJ e regime histórico não preenchem UF operacional ou tipo fiscal automaticamente', () => {
+  const company = normalizeCompany({cnpj:'19131243000197',razao_social:'EXEMPLO',uf:'SP',regime_tributario:[{ano:2024,forma_de_tributacao:'LUCRO REAL'}]},'19131243000197');
+  const draft = registrationDraft(company);
+  assert.equal(draft.role,''); assert.equal(draft.originUf,''); assert.equal(draft.regime,'pending');
+  assert.deepEqual(registrationIssues(draft),['Identificar a empresa']);
+  draft.role='carrier';
+  assert.ok(registrationIssues(draft).includes('UF de início'));
+  Object.assign(draft,{name:'TRANSPORTADORA',regime:'real',originUf:'BA',priceMode:'included',icmsMode:'standard'});
+  assert.deepEqual(registrationIssues(draft),[]);
+});
+
+test('Simples no DAS exige percentuais e frete com tributos incluídos', () => {
+  const draft=registrationDraft({cnpj:'19131243000197'});
+  Object.assign(draft,{role:'carrier',name:'EXEMPLO',regime:'simples_das',originUf:'SP',priceMode:'base',icmsMode:'standard'});
+  assert.deepEqual(registrationIssues(draft),['CBS no DAS','IBS no DAS','Simples no DAS requer frete com impostos incluídos']);
+  Object.assign(draft,{cbsDas:'1.25',ibsDas:'0',priceMode:'included'});
+  assert.deepEqual(registrationIssues(draft),[]);
+  draft.cbsDas='100'; assert.ok(registrationIssues(draft).includes('CBS no DAS'));
+});
+
+test('CSV é uma conferência e neutraliza fórmulas nos textos', () => {
+  const draft=registrationDraft({cnpj:'19131243000197',name:'=EXEMPLO',city:'SAO PAULO',uf:'SP',status:'ATIVA',simples:'Não informado',history:null,source:'Minha Receita'});
+  Object.assign(draft,{role:'carrier',name:'@TRANSPORTADORA',regime:'real',originUf:'SP',priceMode:'included',icmsMode:'standard'});
+  const csv=registrationCsv([draft],'2027');
+  assert.ok(csv.startsWith('\uFEFF"Ano do cadastro";'));
+  assert.ok(csv.includes('"\'=EXEMPLO"')); assert.ok(csv.includes('"\'@TRANSPORTADORA"'));
+  assert.ok(csv.includes('"19.131.243/0001-97"')); assert.ok(csv.includes('Nenhuma pendência dos campos básicos'));
+  assert.ok(csv.includes('"11,2";"Provisória";"0,05";"0,05"'));
+  const nextYear=registrationCsv([draft],'2028');
+  assert.ok(nextYear.includes('"";"Pendente";"0,05";"0,05"'));
 });
