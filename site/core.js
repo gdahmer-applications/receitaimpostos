@@ -91,17 +91,24 @@ export function classificationView(payload, code) {
 
 export async function queryCompany(cnpj, fetcher = fetch) {
   if (!validCnpj(cnpj)) throw new Error('CNPJ inválido. Confira os dígitos.');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  try {
-    const response = await fetcher(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, { signal: controller.signal, headers: { Accept: 'application/json' }, cache: 'no-store' });
-    if (response.status === 404) throw new Error('CNPJ não encontrado na base consultada.');
-    if (response.status === 429) throw new Error('Limite de consultas atingido. Aguarde e tente novamente.');
-    if (!response.ok) throw new Error('Serviço cadastral indisponível. Tente novamente.');
-    return normalizeCompany(await response.json(), cnpj);
-  } catch (error) {
-    if (error?.name === 'AbortError') throw new Error('Tempo de consulta esgotado. Tente novamente.');
-    if (error instanceof TypeError) throw new Error('Não foi possível acessar a BrasilAPI. Confira a conexão e tente novamente.');
-    throw error;
-  } finally { clearTimeout(timeout); }
+  const sources = [
+    { name: 'Minha Receita', url: `https://minhareceita.org/${cnpj}` },
+    { name: 'BrasilAPI', url: `https://brasilapi.com.br/api/cnpj/v1/${cnpj}` },
+  ];
+  let notFound = false;
+  for (const source of sources) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetcher(source.url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+      if (response.status === 404) { notFound = true; continue; }
+      if (!response.ok) continue;
+      return { ...normalizeCompany(await response.json(), cnpj), source: source.name };
+    } catch (error) {
+      // Uma fonte pode estar fora do ar, bloquear o navegador ou devolver um registro incompatível.
+      // A outra fonte é tentada sem transformar ausência de dados em informação fiscal.
+    } finally { clearTimeout(timeout); }
+  }
+  if (notFound) throw new Error('CNPJ não encontrado em uma das bases; confirme o cadastro.');
+  throw new Error('Fontes cadastrais indisponíveis. Confira a conexão e tente novamente.');
 }

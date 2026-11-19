@@ -11,6 +11,7 @@ function addRow(item, result, error) {
   const company = cell(row);
   company.append(element('span', result?.name || (item.valid ? 'Consulta indisponível' : 'CNPJ inválido'), 'company-name'));
   company.append(element('span', formatCnpj(item.input), 'subtext'));
+  if (result?.source) company.append(element('span', `Fonte: ${result.source}`, 'subtext'));
   if (error) {
     const err = cell(row); err.colSpan = 4; err.append(badge(error, 'error'));
   } else {

@@ -8,7 +8,7 @@ Após a publicação, o endereço esperado é <https://gdahmer-applications.gith
 
 ## Consulta de CNPJ
 
-Cole até 50 CNPJs, separados por linha, vírgula ou ponto e vírgula. A consulta é feita pelo navegador diretamente à [BrasilAPI](https://brasilapi.com.br/docs#tag/CNPJ), serviço de terceiros que usa a Minha Receita e dados públicos. Os CNPJs consultados não são enviados ao GitHub pelo site nem adicionados ao código ou aos resultados do Actions. A API externa recebe os CNPJs e pode manter seus próprios registros.
+Cole até 50 CNPJs, separados por linha, vírgula ou ponto e vírgula. A consulta é feita pelo navegador diretamente à [Minha Receita](https://docs.minhareceita.org/) e, se necessário, à [BrasilAPI](https://brasilapi.com.br/docs#tag/CNPJ), serviços de terceiros que usam dados públicos. Os CNPJs consultados não são enviados ao GitHub pelo site nem adicionados ao código ou aos resultados do Actions. As APIs externas recebem os CNPJs e têm suas próprias políticas de dados.
 
 A página apresenta situação cadastral, localidade, opção pelo Simples quando informada e o último ano de histórico de IRPJ disponível. Essas informações podem estar desatualizadas: histórico de lucro real/presumido não confirma o regime atual ou futuro e a opção cadastral pelo Simples não informa, por si só, a opção por IBS/CBS dentro ou fora do DAS.
 

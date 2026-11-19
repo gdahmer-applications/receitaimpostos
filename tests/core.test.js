@@ -40,8 +40,11 @@ test('consulta pública só usa dados da empresa solicitada e trata erro', async
   let url='';
   const fetcher=async input=>{url=input;return {ok:true,status:200,json:async()=>({cnpj:'19131243000197',razao_social:'EMPRESA',qsa:[{nome_socio:'PRIVADO'}]})}};
   const result=await queryCompany('19131243000197',fetcher);
-  assert.equal(url,'https://brasilapi.com.br/api/cnpj/v1/19131243000197');
+  assert.equal(url,'https://minhareceita.org/19131243000197');
   assert.equal(result.name,'EMPRESA'); assert.equal('qsa' in result,false);
-  await assert.rejects(queryCompany('19131243000197',async()=>({ok:false,status:429})),/Limite/);
+  let attempts=0;
+  const fallback=await queryCompany('19131243000197',async input=>{attempts++;return attempts===1?{ok:false,status:429}:{ok:true,status:200,json:async()=>({cnpj:'19131243000197',razao_social:'EMPRESA'})}});
+  assert.equal(attempts,2); assert.equal(fallback.source,'BrasilAPI');
+  await assert.rejects(queryCompany('19131243000197',async()=>({ok:false,status:429})),/indisponíveis/);
   await assert.rejects(queryCompany('19131243000198',fetcher),/inválido/);
 });
