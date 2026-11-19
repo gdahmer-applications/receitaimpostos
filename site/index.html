@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light">
   <title>Consulta Fiscal | CNPJ e créditos</title>
   <meta name="description" content="Consulta cadastral de CNPJs e classificação tributária de CT-e.">
-  <link rel="stylesheet" href="./styles.css?v=3">
+  <link rel="stylesheet" href="./styles.css?v=4">
 </head>
 <body>
   <header class="topbar">
@@ -21,6 +21,14 @@
       <h1>Informações para<br><span>uma análise mais clara.</span></h1>
       <p>Consulte empresas e confira indicadores da classificação tributária do CT-e em um só lugar.</p></div>
       <div class="hero-icon" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><rect x="17" y="12" width="51" height="66" rx="8" fill="#e8efff"/><path d="M29 29h26M29 39h21M29 49h18M29 59h14" stroke="#4972db" stroke-width="4" stroke-linecap="round"/><circle cx="66" cy="64" r="18" fill="#173a83"/><path d="m79 77 9 9" stroke="#173a83" stroke-width="6" stroke-linecap="round"/><path d="m59 64 5 5 9-10" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </section>
+
+    <section class="card cte-card" aria-labelledby="cte-title">
+      <div><div class="eyebrow muted">LEITURA AUTOMÁTICA · CT-e</div><h2 id="cte-title">Aproveitar dados dos CT-es</h2><p>Selecione os arquivos XML de <strong>entrega ao cliente final</strong>. Extraímos emissor, início e destino, ICMS e classificação informada no documento.</p>
+        <p class="cte-note">A leitura é feita no seu navegador. Somente o CNPJ do emissor é enviado à Minha Receita / BrasilAPI para completar a consulta cadastral. CT-es de transferência não devem ser selecionados.</p>
+      </div>
+      <div class="cte-actions"><input id="cte-files" type="file" accept=".xml,application/xml,text/xml" multiple><label class="outline cte-upload" for="cte-files">Selecionar XMLs de entrega ↑</label><button id="cte-example" class="cte-example" type="button">Testar com exemplo fictício</button></div>
+      <p id="cte-feedback" class="cte-feedback" role="status"></p>
     </section>
 
     <section class="layout" aria-label="Consulta cadastral">
@@ -75,6 +83,6 @@
 
     <footer><span>Consulta Fiscal <span class="footer-sep">·</span> Apoio à análise de fretes</span><a href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular" target="_blank" rel="noopener noreferrer">Fonte: Receita Federal ↗</a></footer>
   </main>
-  <script type="module" src="./app.js?v=3"></script>
+  <script type="module" src="./app.js?v=4"></script>
 </body>
 </html>

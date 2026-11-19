@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- EXEMPLO FICTÍCIO, SEM VALIDADE FISCAL: demonstração da leitura de campos. -->
+<cteProc xmlns="http://www.portalfiscal.inf.br/cte" versao="4.00">
+  <CTe>
+    <infCte Id="CTeEXEMPLOFICTICIO123" versao="4.00">
+      <ide><mod>57</mod><serie>1</serie><nCT>123</nCT><dhEmi>2026-11-01T12:00:00-03:00</dhEmi><tpCTe>0</tpCTe><xMunIni>Campinas</xMunIni><UFIni>SP</UFIni><xMunFim>Salvador</xMunFim><UFFim>BA</UFFim></ide>
+      <emit><CNPJ>12ABC34501DE35</CNPJ><xNome>TRANSPORTADORA EXEMPLO FICTÍCIO</xNome></emit>
+      <vPrest><vTPrest>100.00</vTPrest></vPrest>
+      <imp><ICMS><ICMS00><CST>00</CST><pICMS>7.00</pICMS><vICMS>7.00</vICMS></ICMS00></ICMS><IBSCBS><CST>000</CST><cClassTrib>000001</cClassTrib><vCBS>0.80</vCBS><vIBS>0.08</vIBS></IBSCBS></imp>
+    </infCte>
+  </CTe>
+</cteProc>

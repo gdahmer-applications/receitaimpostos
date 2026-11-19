@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validCnpj, normalizeCnpj, parseCnpjs, simpleLabel, latestTaxHistory, normalizeCompany, classificationView, queryCompany, registrationDraft, registrationIssues, registrationCsv } from '../site/core.js';
+import { validCnpj, normalizeCnpj, parseCnpjs, simpleLabel, latestTaxHistory, normalizeCompany, classificationView, queryCompany, registrationDraft, registrationIssues, registrationCsv, parseCteDocument, parseCteText, addCteEvidence } from '../site/core.js';
 
 test('valida CNPJs numérico e alfanumérico da Receita', () => {
   assert.equal(validCnpj('19.131.243/0001-97'), true);
@@ -79,4 +79,42 @@ test('CSV é uma conferência e neutraliza fórmulas nos textos', () => {
   assert.ok(csv.includes('"11,2";"Provisória";"0,05";"0,05"'));
   const nextYear=registrationCsv([draft],'2028');
   assert.ok(nextYear.includes('"";"Pendente";"0,05";"0,05"'));
+});
+
+function xmlNode(name, value = '', children = [], attrs = {}) {
+  return {
+    name, textContent: value || children.map(child => child.textContent).join(''), children,
+    getAttribute: key => attrs[key] || '',
+    getElementsByTagNameNS: (_ns, target) => {
+      const matches=[];
+      const visit = node => { for (const child of node.children || []) { if (child.name === target) matches.push(child); visit(child); } };
+      visit({children}); return matches;
+    },
+  };
+}
+
+test('extrai dados do CT-e e não utiliza documentos complementares', () => {
+  const node=(name,value)=>xmlNode(name,value);
+  const ide=type=>xmlNode('ide','',[node('mod','57'),node('tpCTe',type),node('nCT','123'),node('serie','1'),node('dhEmi','2026-11-01T12:00:00-03:00'),node('xMunIni','Campinas'),node('UFIni','SP'),node('xMunFim','Salvador'),node('UFFim','BA')]);
+  const emit=xmlNode('emit','',[node('CNPJ','12ABC34501DE35'),node('xNome','EMPRESA DE TESTE')]);
+  const imp=xmlNode('imp','',[xmlNode('ICMS','',[node('CST','00'),node('pICMS','7.00'),node('vICMS','7.00')]),xmlNode('IBSCBS','',[node('CST','000'),node('cClassTrib','000001')])]);
+  const makeDoc=type=>xmlNode('document','',[xmlNode('infCte','',[ide(type),emit,xmlNode('vPrest','',[node('vTPrest','100.00')]),imp],{Id:'CTeTESTE'})]);
+  const doc=parseCteDocument(makeDoc('0'),'exemplo.xml');
+  assert.equal(doc.cnpj,'12ABC34501DE35'); assert.equal(doc.startUf,'SP'); assert.equal(doc.endUf,'BA');
+  assert.equal(doc.icmsRate,'7.00'); assert.equal(doc.cClassTrib,'000001'); assert.equal(doc.date,'2026-11-01');
+  assert.throws(()=>parseCteDocument(makeDoc('1')),/conferência manual/);
+  assert.throws(()=>parseCteText('<!DOCTYPE foo><CTe/>'),/não permitida/);
+});
+
+test('origem por CT-e é sugerida, conflitos preservam a escolha manual e duplicatas são ignoradas', () => {
+  const draft=registrationDraft({cnpj:'12ABC34501DE35'});
+  const doc={cnpj:'12ABC34501DE35',id:'primeiro',startUf:'SP',startCity:'Campinas',cClassTrib:'000001'};
+  assert.equal(addCteEvidence(draft,doc),true); assert.equal(draft.role,'carrier'); assert.equal(draft.originUf,'SP');
+  assert.equal(draft.cClassTrib,'000001'); assert.equal(addCteEvidence(draft,doc),false);
+  addCteEvidence(draft,{...doc,id:'segundo',startUf:'PE',startCity:'Olinda'});
+  assert.equal(draft.originUf,''); assert.equal(draft.originCity,'');
+  draft.originUf='BA'; draft.originSource='manual';
+  addCteEvidence(draft,{...doc,id:'terceiro',startUf:'BA',startCity:'Salvador'});
+  assert.equal(draft.originUf,'BA');
+  assert.throws(()=>addCteEvidence(draft,{...doc,id:'outro',cnpj:'19131243000197'}),/outro CNPJ/);
 });

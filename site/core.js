@@ -101,7 +101,63 @@ export function registrationDraft(company) {
   return {
     company, role: '', name: '', regime: 'pending', originUf: '', originCity: '',
     priceMode: 'pending', icmsMode: 'pending', cbsDas: '', ibsDas: '', cClassTrib: '', note: '',
+    documents: [], originSource: '', citySource: '', classSource: '',
   };
+}
+
+function firstTag(node, name) {
+  return node?.getElementsByTagNameNS?.('*', name)?.[0] || null;
+}
+function tagText(node, name) {
+  return String(firstTag(node, name)?.textContent || '').trim();
+}
+
+export function parseCteDocument(doc, filename = '') {
+  if (!doc || firstTag(doc, 'parsererror')) throw new Error('XML inválido ou incompleto.');
+  const info = firstTag(doc, 'infCte'); const ide = firstTag(info, 'ide'); const emit = firstTag(info, 'emit');
+  if (!info || !ide || !emit || tagText(ide, 'mod') !== '57') throw new Error('O arquivo não é um CT-e modelo 57.');
+  const cnpj = normalizeCnpj(tagText(emit, 'CNPJ'));
+  if (!validCnpj(cnpj)) throw new Error('CNPJ do emissor ausente ou inválido no CT-e.');
+  const type = tagText(ide, 'tpCTe');
+  if (type !== '0') throw new Error('CT-e complementar, anulação ou substituição exige conferência manual.');
+  const tax = firstTag(info, 'imp'); const icms = firstTag(tax, 'ICMS'); const rtc = firstTag(tax, 'IBSCBS'); const price = firstTag(info, 'vPrest');
+  const id = String(info.getAttribute?.('Id') || '').replace(/^CTe/i, '');
+  return {
+    cnpj, name: tagText(emit, 'xNome'), tradeName: tagText(emit, 'xFant'), filename,
+    date: tagText(ide, 'dhEmi').slice(0, 10), number: tagText(ide, 'nCT'), series: tagText(ide, 'serie'),
+    startUf: tagText(ide, 'UFIni').toUpperCase(), startCity: tagText(ide, 'xMunIni'),
+    endUf: tagText(ide, 'UFFim').toUpperCase(), endCity: tagText(ide, 'xMunFim'),
+    total: tagText(price, 'vTPrest'), icmsCst: tagText(icms, 'CST'),
+    icmsRate: tagText(icms, 'pICMS'), icmsValue: tagText(icms, 'vICMS'),
+    cClassTrib: tagText(rtc, 'cClassTrib'), cstRtc: tagText(rtc, 'CST'),
+    cbs: tagText(rtc, 'vCBS'), ibs: tagText(rtc, 'vIBS'),
+    id: id || `${cnpj}|${tagText(ide, 'serie')}|${tagText(ide, 'nCT')}|${tagText(ide, 'dhEmi')}`,
+  };
+}
+
+export function parseCteText(xml, filename = '') {
+  if (typeof xml !== 'string' || !xml.trim()) throw new Error('Arquivo XML vazio.');
+  if (xml.length > 5_000_000) throw new Error('O XML excede o limite de 5 MB.');
+  if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error('O XML contém uma declaração não permitida.');
+  return parseCteDocument(new DOMParser().parseFromString(xml, 'application/xml'), filename);
+}
+
+function distinct(values) {
+  return [...new Set(values.map(v => String(v || '').trim()).filter(Boolean))];
+}
+
+export function addCteEvidence(record, doc) {
+  if (record.company.cnpj !== doc.cnpj) throw new Error('O CT-e pertence a outro CNPJ emissor.');
+  if (record.documents.some(item => item.id === doc.id)) return false;
+  record.documents.push(doc);
+  if (!record.role) record.role = 'carrier';
+  const ufs = distinct(record.documents.map(item => item.startUf).filter(uf => UFS.includes(uf)));
+  const cities = distinct(record.documents.map(item => item.startCity));
+  if (record.originSource !== 'manual') { record.originUf = ufs.length === 1 ? ufs[0] : ''; record.originSource = 'cte'; }
+  if (record.citySource !== 'manual') { record.originCity = ufs.length === 1 && cities.length === 1 ? cities[0] : ''; record.citySource = 'cte'; }
+  const codes = distinct(record.documents.map(item => item.cClassTrib).filter(code => /^\d{6}$/.test(code)));
+  if (record.classSource !== 'manual') { record.cClassTrib = codes.length === 1 ? codes[0] : ''; record.classSource = 'cte'; }
+  return true;
 }
 
 function validPercent(value) {
@@ -139,13 +195,16 @@ export function registrationCsv(records, year) {
   const headers = ['Ano do cadastro','Papel','Nome no FreteLAB','Razão social','CNPJ','Município cadastral','UF cadastral',
     'Situação cadastral','Simples informado','Histórico IRPJ','Fonte cadastro','Tipo fiscal confirmado','UF início transporte',
     'Município início transporte','Tratamento do frete','Tratamento do ICMS','CBS no DAS (%)','IBS no DAS (%)',
-    'cClassTrib - referência','Observações','Pendências','Padrão Madesa ICMS v1.3.38','Padrão Madesa CBS v1.3.38',
+    'cClassTrib - referência','Observações','Pendências','CT-es lidos','Origens observadas nos CT-es','Destinos observados nos CT-es',
+    'Datas dos CT-es','Valores de frete nos CT-es (R$)','CST ICMS nos CT-es','Alíquotas de ICMS observadas nos CT-es','Valores ICMS nos CT-es (R$)',
+    'Fonte da UF de início','Padrão Madesa ICMS v1.3.38','Padrão Madesa CBS v1.3.38',
     'Padrão Madesa IBS v1.3.38','CBS padrão do ano (%)','Status CBS do ano','IBS UF padrão do ano (%)','IBS município padrão do ano (%)'];
   const annual = String(year) === '2027' ? ['11,2','Provisória','0,05','0,05'] : ['','Pendente','0,05','0,05'];
   const rows = records.map(record => {
     const c = record.company;
     const isCarrier = record.role === 'carrier';
     const pending = registrationIssues(record);
+    const documents = Array.isArray(record.documents) ? record.documents : [];
     const history = c.history ? `${c.history.description} (${c.history.year})` : 'Não informado';
     return [year, record.role === 'carrier' ? 'Transportadora' : record.role === 'madesa' ? 'Madesa' : 'Pendente',
       isCarrier ? record.name : '', c.name, formatCnpj(c.cnpj), c.city, c.uf, c.status, c.simples, history, c.source || 'Indisponível',
@@ -154,6 +213,11 @@ export function registrationCsv(records, year) {
       isCarrier && record.regime === 'simples_das' ? record.cbsDas : '', isCarrier && record.regime === 'simples_das' ? record.ibsDas : '',
       isCarrier ? record.cClassTrib : '', record.note,
       record.role === 'madesa' ? 'Conferir regras gerais da Madesa no FreteLAB' : pending.length ? pending.join(' | ') : 'Nenhuma pendência dos campos básicos',
+      documents.length, distinct(documents.map(d => [d.startCity, d.startUf].filter(Boolean).join('/'))).join(' | '),
+      distinct(documents.map(d => [d.endCity, d.endUf].filter(Boolean).join('/'))).join(' | '),
+      distinct(documents.map(d => d.date)).join(' | '), distinct(documents.map(d => d.total)).join(' | '), distinct(documents.map(d => d.icmsCst)).join(' | '),
+      distinct(documents.map(d => d.icmsRate ? `${d.icmsRate}%` : '')).join(' | '), distinct(documents.map(d => d.icmsValue)).join(' | '),
+      record.originSource === 'cte' ? 'Sugestão por CT-e; confirmar operação e ano' : record.originSource === 'manual' ? 'Informada manualmente' : 'Pendente',
       'Elegível 100% por premissa','Pendente','Pendente',...annual];
   });
   return '\uFEFF' + [headers, ...rows].map(row => row.map(csvCell).join(';')).join('\r\n') + '\r\n';

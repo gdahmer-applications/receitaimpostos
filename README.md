@@ -18,6 +18,14 @@ Depois de consultar, identifique cada empresa como **transportadora** ou **Mades
 
 As premissas gerais da Madesa e as alíquotas padrão por ano são apresentadas como referências da versão 1.3.38, não como leitura das configurações atuais do banco de dados. O CSV baixado é uma conferência editável, com pendências, e **não é um arquivo de importação automática**. CNPJ e cClassTrib também são dados de referência e não são gravados no cadastro fiscal dessa versão. As anotações da tela são mantidas apenas enquanto a página estiver aberta.
 
+## Ler XMLs de CT-e
+
+Selecione até 50 XMLs de CT-e de entrega ao cliente final. A leitura ocorre no navegador e extrai CNPJ e nome do emissor, início e destino, data, valores e alíquota de ICMS destacados e cClassTrib quando presentes. Somente o CNPJ do emissor é enviado aos provedores de dados cadastrais; o XML completo e os dados do cliente não são enviados por esta página.
+
+Se houver uma única UF e município de início nos documentos de um mesmo CNPJ, eles são sugeridos no cadastro. Se houver mais de uma origem, a UF fica pendente para conferência; uma origem informada manualmente é preservada. Filiais diferentes não são agrupadas automaticamente. A classificação lida é uma referência para verificar no ano do cenário. Percentuais e valores do CT-e valem para a data daquele documento e não alteram os parâmetros de 2027 ou 2028.
+
+A página não identifica com segurança se um CT-e normal corresponde a entrega ao cliente final ou transferência: selecione somente os de entrega. CT-es complementares, de anulação ou de substituição são indicados para conferência manual. O botão de exemplo usa um XML fictício sem validade fiscal e não envia o CNPJ de exemplo aos provedores cadastrais.
+
 ## Consulta da classificação do CT-e
 
 Informe o código `cClassTrib` do documento e a data de referência disponível. A página apresenta os indicadores da Receita para crédito do adquirente de IBS/CBS e o vínculo com CT-e registrado na base; não identifica a classificação pelo CNPJ e não confirma automaticamente o crédito. As tabelas representam uma fotografia com data e versão fixas, devendo ser atualizadas e revisadas conforme a Receita publique mudanças.
